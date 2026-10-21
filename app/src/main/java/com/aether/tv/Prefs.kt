@@ -3,26 +3,47 @@ package com.aether.tv
 import android.content.Context
 import android.content.SharedPreferences
 
-class Prefs private constructor(context: Context) {
+class Prefs private constructor(context: Context, val profileId: String) {
+
+    /** Guest is read-only: it always shows every app with default looks. */
+    val isGuest: Boolean = profileId == ProfileStore.GUEST_ID
 
     private val sp: SharedPreferences =
-        context.getSharedPreferences("aether_prefs", Context.MODE_PRIVATE)
+        context.getSharedPreferences("aether_prefs_$profileId", Context.MODE_PRIVATE)
 
     private fun int(key: String, def: Int): Int = sp.getInt(key, def)
     private fun bool(key: String, def: Boolean): Boolean = sp.getBoolean(key, def)
     private fun str(key: String, def: String): String = sp.getString(key, def) ?: def
-    private fun put(key: String, v: Int) { sp.edit().putInt(key, v).apply() }
-    private fun put(key: String, v: Boolean) { sp.edit().putBoolean(key, v).apply() }
-    private fun put(key: String, v: String) { sp.edit().putString(key, v).apply() }
+
+    private fun put(key: String, v: Int) {
+        if (isGuest) return
+        sp.edit().putInt(key, v).apply()
+    }
+
+    private fun put(key: String, v: Boolean) {
+        if (isGuest) return
+        sp.edit().putBoolean(key, v).apply()
+    }
+
+    private fun put(key: String, v: String) {
+        if (isGuest) return
+        sp.edit().putString(key, v).apply()
+    }
 
     private fun getList(key: String): MutableList<String> {
+        if (isGuest) return mutableListOf()
         val s = sp.getString(key, "") ?: ""
         return if (s.isEmpty()) mutableListOf() else s.split("\n").toMutableList()
     }
 
     private fun putList(key: String, list: List<String>) {
+        if (isGuest) return
         sp.edit().putString(key, list.joinToString("\n")).apply()
     }
+
+    /** The profile's display name, taken from the profile list. */
+    val userName: String
+        get() = ProfileStore.get(profileId)?.name ?: ""
 
     // ---------- Appearance ----------
     var theme: Int
@@ -64,15 +85,7 @@ class Prefs private constructor(context: Context) {
         get() = int("animSpeed", ANIM_NORMAL)
         set(v) = put("animSpeed", v)
 
-    var introEnabled: Boolean
-        get() = bool("introEnabled", true)
-        set(v) = put("introEnabled", v)
-
     // ---------- Header ----------
-    var userName: String
-        get() = str("userName", "Priyesh")
-        set(v) = put("userName", v)
-
     /** Empty string means "automatic greeting". */
     var greetingText: String
         get() = str("greetingText", "")
@@ -159,6 +172,7 @@ class Prefs private constructor(context: Context) {
 
     // ---------- Presets and reset ----------
     fun applyPreset(preset: Int) {
+        if (isGuest) return
         val e = sp.edit()
         when (preset) {
             PRESET_COMPACT -> {
@@ -180,7 +194,9 @@ class Prefs private constructor(context: Context) {
         e.apply()
     }
 
+    /** Resets this profile's look and layout, favorites, hidden apps and recents. */
     fun resetAll() {
+        if (isGuest) return
         sp.edit().clear().apply()
     }
 
@@ -216,13 +232,28 @@ class Prefs private constructor(context: Context) {
             "Sky", "Violet", "Mint", "Coral", "Amber", "Rose", "Cyan", "Lime"
         )
 
-        @Volatile
-        private var instance: Prefs? = null
+        private val cache = HashMap<String, Prefs>()
 
+        /** Settings of the profile that is currently active (Guest if none is active). */
         fun get(context: Context): Prefs {
-            return instance ?: synchronized(this) {
-                instance ?: Prefs(context.applicationContext).also { instance = it }
+            ProfileStore.ensure(context)
+            val id = ProfileStore.activeId ?: ProfileStore.GUEST_ID
+            return forProfile(context, id)
+        }
+
+        @Synchronized
+        fun forProfile(context: Context, id: String): Prefs {
+            var p = cache[id]
+            if (p == null) {
+                p = Prefs(context.applicationContext, id)
+                cache[id] = p
             }
+            return p
+        }
+
+        @Synchronized
+        fun forget(id: String) {
+            cache.remove(id)
         }
     }
 }
