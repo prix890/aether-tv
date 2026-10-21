@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_base">#0B0D12</color>
+    <color name="bg_amoled">#000000</color>
+    <color name="surface">#151925</color>
+    <color name="surface_high">#1E2434</color>
+    <color name="text_primary">#F2F4FA</color>
+    <color name="text_secondary">#9AA3B8</color>
+    <color name="accent_default">#7C9CFF</color>
+    <color name="icon_bg">#0B0D12</color>
+</resources>
