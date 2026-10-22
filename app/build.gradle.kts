@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val ksPath: String? = System.getenv("AETHER_KEYSTORE")
+val useKey: Boolean = ksPath != null && file(ksPath).exists()
+
 android {
     namespace = "com.aether.tv"
     compileSdk = 34
@@ -15,6 +18,17 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            if (useKey) {
+                storeFile = file(ksPath!!)
+                storePassword = "aether-ci-pass"
+                keyAlias = "aether"
+                keyPassword = "aether-ci-pass"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -23,7 +37,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (useKey) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
