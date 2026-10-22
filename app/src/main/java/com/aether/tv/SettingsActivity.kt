@@ -139,12 +139,6 @@ class SettingsActivity : Activity() {
         toggle("Intro when Aether starts (all profiles)", ProfileStore.introEnabled) {
             ProfileStore.introEnabled = it
         }
-        row("Name shown in the intro", ProfileStore.ownerName) {
-            promptText("Name shown in the intro", "Your name", ProfileStore.ownerName, 16) {
-                ProfileStore.ownerName = it
-                rebuild()
-            }
-        }
 
         section("Apps")
         row("Hidden apps", "${AppRepository.hiddenApps(pf).size}") { showHiddenApps() }
