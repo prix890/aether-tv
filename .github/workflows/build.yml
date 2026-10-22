@@ -23,7 +23,24 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: Restore signing key from cache
+        id: keycache
+        uses: actions/cache@v4
+        with:
+          path: aether.keystore
+          key: aether-signing-key-v1
+
+      - name: Create signing key (first run only)
+        if: steps.keycache.outputs.cache-hit != 'true'
+        run: |
+          keytool -genkeypair -keystore aether.keystore \
+            -storepass aether-ci-pass -keypass aether-ci-pass \
+            -alias aether -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Aether TV"
+
       - name: Build release APK
+        env:
+          AETHER_KEYSTORE: ${{ github.workspace }}/aether.keystore
         run: gradle :app:assembleRelease --no-daemon
 
       - name: Keep APK as a downloadable artifact
